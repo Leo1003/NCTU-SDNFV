@@ -1,0 +1,6 @@
+# ONOS apps artifacts
+target/
+
+# Vim swap file
+*.swp
+
