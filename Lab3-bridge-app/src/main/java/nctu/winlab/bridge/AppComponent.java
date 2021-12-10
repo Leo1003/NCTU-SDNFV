@@ -238,6 +238,25 @@ public class AppComponent {
         return rule;
     }
 
+    private ForwardingObjective construct_output_objective(DeviceId id, MacAddress src, MacAddress dst, PortNumber port) {
+        TrafficTreatment traffic = DefaultTrafficTreatment.builder()
+            .setOutput(port)
+            .build();
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchEthSrc(src)
+            .matchEthDst(dst)
+            .build();
+		ForwardingObjective objective = DefaultForwardingObjective.builder()
+			.fromApp(this.appId)
+			.withFlag(ForwardingObjective.Flag.VERSATILE)
+			.withSelector(selector)
+			.withTreatment(traffic)
+			.withPriority(30)
+			.makeTemporary(30)
+			.add();
+        return objective;
+    }
+
     /* Packet processor */
     private class BridgePacketProcessor implements PacketProcessor {
         @Override
@@ -284,8 +303,8 @@ public class AppComponent {
                 context.send();
             } else {
                 log.info(String.format("MAC %s is matched on %s! Install flow rule!", dst_mac, deviceid));
-                FlowRule rule = construct_output_rule(deviceid, src_mac, dst_mac, out_port);
-                flowRuleService.applyFlowRules(rule);
+                ForwardingObjective objective = construct_output_objective(deviceid, src_mac, dst_mac, out_port);
+                flowObjectiveService.forward(deviceid, objective);
                 context.treatmentBuilder().setOutput(out_port);
                 context.send();
             }
