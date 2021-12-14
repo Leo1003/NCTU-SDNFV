@@ -1,0 +1,14 @@
+FROM sdnfv-lab6
+
+RUN sed -i -E 's|#*net\.ipv4\.ip_forward.*$|net.ipv4.ip_forward=1|' /etc/sysctl.conf
+
+RUN apt-get update && \
+    apt-get install -y quagga supervisor
+
+RUN mkdir -p /run/quagga && \
+    chown quagga:quagga /run/quagga
+
+COPY supervisord_conf.d/ /etc/supervisor/conf.d/
+
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
+
