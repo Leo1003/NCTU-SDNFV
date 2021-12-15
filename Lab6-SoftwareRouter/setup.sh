@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 podman run --network R1_network \
-    --ip 172.1.0.1 \
+    --ip 172.21.0.1 \
     --cap-add NET_ADMIN \
     --cap-add NET_RAW \
     --cap-add SYS_ADMIN \
@@ -11,7 +11,7 @@ podman run --network R1_network \
     localhost/sdnfv-lab6-router
 
 podman run --network R2_network \
-    --ip 172.2.0.1 \
+    --ip 172.22.0.1 \
     --cap-add NET_ADMIN \
     --cap-add NET_RAW \
     --cap-add SYS_ADMIN \
@@ -22,7 +22,7 @@ podman run --network R2_network \
     localhost/sdnfv-lab6-router
 
 podman run --network R3_network \
-    --ip 172.3.0.1 \
+    --ip 172.23.0.1 \
     --cap-add NET_ADMIN \
     --cap-add NET_RAW \
     --cap-add SYS_ADMIN \
@@ -33,7 +33,7 @@ podman run --network R3_network \
     localhost/sdnfv-lab6-router
 
 podman run --network R4_network \
-    --ip 172.4.0.1 \
+    --ip 172.24.0.1 \
     --cap-add NET_ADMIN \
     --cap-add NET_RAW \
     --cap-add SYS_ADMIN \
@@ -52,43 +52,43 @@ podman network connect R3R4_br R3
 podman network connect R3R4_br R4
 podman network connect R4R1_br R4
 
-podman exec R1 ip route delete default via 172.1.0.254
-podman exec R1 ip route delete default via 172.0.1.254
-podman exec R1 ip route delete default via 172.0.4.254
-podman exec R1 ip addr delete 172.0.1.1/24 dev eth1
-podman exec R1 ip addr delete 172.0.1.2/24 dev eth1
-podman exec R1 ip addr delete 172.0.4.1/24 dev eth2
-podman exec R1 ip addr delete 172.0.4.2/24 dev eth2
-podman exec R2 ip route delete default via 172.2.0.254
-podman exec R2 ip route delete default via 172.0.1.254
-podman exec R2 ip route delete default via 172.0.2.254
-podman exec R2 ip addr delete 172.0.1.1/24 dev eth1
-podman exec R2 ip addr delete 172.0.1.2/24 dev eth1
-podman exec R2 ip addr delete 172.0.2.1/24 dev eth2
-podman exec R2 ip addr delete 172.0.2.2/24 dev eth2
-podman exec R3 ip route delete default via 172.3.0.254
-podman exec R3 ip route delete default via 172.0.2.254
-podman exec R3 ip route delete default via 172.0.3.254
-podman exec R3 ip addr delete 172.0.2.1/24 dev eth1
-podman exec R3 ip addr delete 172.0.2.2/24 dev eth1
-podman exec R3 ip addr delete 172.0.3.1/24 dev eth2
-podman exec R3 ip addr delete 172.0.3.2/24 dev eth2
-podman exec R4 ip route delete default via 172.4.0.254
-podman exec R4 ip route delete default via 172.0.3.254
-podman exec R4 ip route delete default via 172.0.4.254
-podman exec R4 ip addr delete 172.0.3.1/24 dev eth1
-podman exec R4 ip addr delete 172.0.3.2/24 dev eth1
-podman exec R4 ip addr delete 172.0.4.1/24 dev eth2
-podman exec R4 ip addr delete 172.0.4.2/24 dev eth2
+podman exec R1 ip route delete default via 172.21.0.254
+podman exec R1 ip route delete default via 172.20.1.254
+podman exec R1 ip route delete default via 172.20.4.254
+podman exec R1 ip addr delete 172.20.1.1/24 dev eth1
+podman exec R1 ip addr delete 172.20.1.2/24 dev eth1
+podman exec R1 ip addr delete 172.20.4.1/24 dev eth2
+podman exec R1 ip addr delete 172.20.4.2/24 dev eth2
+podman exec R2 ip route delete default via 172.22.0.254
+podman exec R2 ip route delete default via 172.20.1.254
+podman exec R2 ip route delete default via 172.20.2.254
+podman exec R2 ip addr delete 172.20.1.1/24 dev eth1
+podman exec R2 ip addr delete 172.20.1.2/24 dev eth1
+podman exec R2 ip addr delete 172.20.2.1/24 dev eth2
+podman exec R2 ip addr delete 172.20.2.2/24 dev eth2
+podman exec R3 ip route delete default via 172.23.0.254
+podman exec R3 ip route delete default via 172.20.2.254
+podman exec R3 ip route delete default via 172.20.3.254
+podman exec R3 ip addr delete 172.20.2.1/24 dev eth1
+podman exec R3 ip addr delete 172.20.2.2/24 dev eth1
+podman exec R3 ip addr delete 172.20.3.1/24 dev eth2
+podman exec R3 ip addr delete 172.20.3.2/24 dev eth2
+podman exec R4 ip route delete default via 172.24.0.254
+podman exec R4 ip route delete default via 172.20.3.254
+podman exec R4 ip route delete default via 172.20.4.254
+podman exec R4 ip addr delete 172.20.3.1/24 dev eth1
+podman exec R4 ip addr delete 172.20.3.2/24 dev eth1
+podman exec R4 ip addr delete 172.20.4.1/24 dev eth2
+podman exec R4 ip addr delete 172.20.4.2/24 dev eth2
 
-podman exec R1 ip addr add 172.0.1.1/24 dev eth1
-podman exec R1 ip addr add 172.0.4.1/24 dev eth2
-podman exec R2 ip addr add 172.0.1.2/24 dev eth1
-podman exec R2 ip addr add 172.0.2.1/24 dev eth2
-podman exec R3 ip addr add 172.0.2.2/24 dev eth1
-podman exec R3 ip addr add 172.0.3.1/24 dev eth2
-podman exec R4 ip addr add 172.0.3.2/24 dev eth1
-podman exec R4 ip addr add 172.0.4.2/24 dev eth2
+podman exec R1 ip addr add 172.20.1.1/24 dev eth1
+podman exec R1 ip addr add 172.20.4.1/24 dev eth2
+podman exec R2 ip addr add 172.20.1.2/24 dev eth1
+podman exec R2 ip addr add 172.20.2.1/24 dev eth2
+podman exec R3 ip addr add 172.20.2.2/24 dev eth1
+podman exec R3 ip addr add 172.20.3.1/24 dev eth2
+podman exec R4 ip addr add 172.20.3.2/24 dev eth1
+podman exec R4 ip addr add 172.20.4.2/24 dev eth2
 
 podman run --network R1_network \
     --cap-add NET_ADMIN \
@@ -118,12 +118,12 @@ podman run --network R4_network \
     --name h4 \
     localhost/sdnfv-lab6
 
-podman exec h1 ip route delete default via 172.1.0.254
-podman exec h1 ip route add default via 172.1.0.1
-podman exec h2 ip route delete default via 172.2.0.254
-podman exec h2 ip route add default via 172.2.0.1
-podman exec h3 ip route delete default via 172.3.0.254
-podman exec h3 ip route add default via 172.3.0.1
-podman exec h4 ip route delete default via 172.4.0.254
-podman exec h4 ip route add default via 172.4.0.1
+podman exec h1 ip route delete default via 172.21.0.254
+podman exec h1 ip route add default via 172.21.0.1
+podman exec h2 ip route delete default via 172.22.0.254
+podman exec h2 ip route add default via 172.22.0.1
+podman exec h3 ip route delete default via 172.23.0.254
+podman exec h3 ip route add default via 172.23.0.1
+podman exec h4 ip route delete default via 172.24.0.254
+podman exec h4 ip route add default via 172.24.0.1
 
