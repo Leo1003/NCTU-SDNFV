@@ -1,0 +1,21 @@
+{
+    "devices": {
+        "of:0000000000000001": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 201
+            }
+        },
+        "of:0000000000000002": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 202,
+                "Subnet": "10.1.0.0/16"
+            }
+        },
+        "of:0000000000000003": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 203,
+                "Subnet": "10.2.0.0/16"
+            }
+        }
+    }
+}
