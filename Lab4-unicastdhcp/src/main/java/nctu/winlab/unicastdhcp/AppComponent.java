@@ -220,25 +220,6 @@ public class AppComponent {
             ConnectPoint dhcpServerLoc = config.serverLocation();
             ElementId dhcpServer = dhcpServerLoc.elementId();
 
-            // Calculate the path forward and back
-            Set<Path> paths_c2s = pathService.getPaths(in_pkt.receivedFrom().elementId(), dhcpServer);
-            if (paths_c2s.isEmpty()) {
-                log.warn("There is no path to DHCP server from {}", in_pkt.receivedFrom());
-                return;
-            }
-            Path path_c2s = selectPath(paths_c2s, in_pkt.receivedFrom().port());
-            if (path_c2s == null) {
-                log.warn("There is no normal path to DHCP server from {}", in_pkt.receivedFrom());
-                return;
-            }
-
-            Set<Path> paths_s2c = pathService.getPaths(dhcpServer, in_pkt.receivedFrom().elementId());
-            if (paths_s2c.isEmpty()) {
-                log.warn("There is no path back to {} from DHCP server", in_pkt.receivedFrom());
-                return;
-            }
-            Path path_s2c = selectPath(paths_s2c, null);
-
             // Build the selector and install flow rules
             TrafficSelector c2s_selector = DefaultTrafficSelector.builder()
                 .matchEthSrc(eth_pkt.getSourceMAC())
@@ -256,15 +237,44 @@ public class AppComponent {
                 .matchUdpDst(TpPort.tpPort(68))
                 .build();
 
-            log.info("Install client to server path");
-            installPathRules(c2s_selector, path_c2s);
+            // Calculate the path forward and back
+            if (!dhcpServer.equals(in_pkt.receivedFrom().elementId())) {
+                log.info("Creating path between: {} <-> {}", dhcpServer, in_pkt.receivedFrom().elementId());
+                Set<Path> paths_c2s = pathService.getPaths(in_pkt.receivedFrom().elementId(), dhcpServer);
+                if (paths_c2s.isEmpty()) {
+                    log.warn("There is no path to DHCP server from {}", in_pkt.receivedFrom());
+                    return;
+                }
+                Path path_c2s = selectPath(paths_c2s, in_pkt.receivedFrom().port());
+                if (path_c2s == null) {
+                    log.warn("There is no normal path to DHCP server from {}", in_pkt.receivedFrom());
+                    return;
+                }
+
+                Set<Path> paths_s2c = pathService.getPaths(dhcpServer, in_pkt.receivedFrom().elementId());
+                if (paths_s2c.isEmpty()) {
+                    log.warn("There is no path back to {} from DHCP server", in_pkt.receivedFrom());
+                    return;
+                }
+                Path path_s2c = selectPath(paths_s2c, null);
+
+                log.info("Install client to server path");
+                installPathRules(c2s_selector, path_c2s);
+                log.info("Install server to client path");
+                installPathRules(s2c_selector, path_s2c);
+
+                // Packet out
+                context.treatmentBuilder().setOutput(path_c2s.src().port());
+            } else {
+                // DHCP Server and Client are on the same edge switch
+                context.treatmentBuilder().setOutput(dhcpServerLoc.port());
+            }
+
+            log.info("Install to server edge path");
             installEdgeLink(c2s_selector, DefaultEdgeLink.createEdgeLink(dhcpServerLoc, false));
-            log.info("Install server to client path");
-            installPathRules(s2c_selector, path_s2c);
+            log.info("Install to client edge path");
             installEdgeLink(s2c_selector, DefaultEdgeLink.createEdgeLink(in_pkt.receivedFrom(), false));
 
-            // Packet out
-            context.treatmentBuilder().setOutput(path_c2s.src().port());
             context.send();
         }
     }
