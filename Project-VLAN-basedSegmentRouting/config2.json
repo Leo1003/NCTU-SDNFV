@@ -1,4 +1,11 @@
 {
+    "apps": {
+        "nctu.winlab.unicastdhcp": {
+            "UnicastDhcpConfig": {
+                "serverLocation": "of:0000000000000003/2"
+            }
+        }
+    },
     "devices": {
         "of:0000000000000001": {
             "SegmentRoutingConfig": {
@@ -8,13 +15,13 @@
         "of:0000000000000002": {
             "SegmentRoutingConfig": {
                 "SegmentID": 202,
-                "Subnet": "10.1.0.0/16"
+                "Subnet": "10.0.1.0/24"
             }
         },
         "of:0000000000000003": {
             "SegmentRoutingConfig": {
                 "SegmentID": 203,
-                "Subnet": "10.2.0.0/16"
+                "Subnet": "10.0.2.0/24"
             }
         }
     }
