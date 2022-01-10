@@ -70,6 +70,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_REGISTERED;
+import static org.onosproject.net.config.NetworkConfigEvent.Type.CONFIG_UNREGISTERED;
 import static org.onosproject.net.config.basics.SubjectFactories.DEVICE_SUBJECT_FACTORY;
 
 @Component(immediate = true)
@@ -372,7 +374,7 @@ public class AppComponent {
         for (HostLocation location: host.locations()) {
             DeviceId deviceid = location.deviceId();
             SegmentRoutingConfig config = cfgService.getConfig(deviceid, SegmentRoutingConfig.class);
-            if (config.subnet().isPresent()) {
+            if (config != null && config.subnet().isPresent()) {
                 IpPrefix prefix = config.subnet().get();
                 for (IpAddress ip: host.ipAddresses()) {
                     if (prefix.contains(ip)) {
@@ -440,8 +442,11 @@ public class AppComponent {
         @Override
         public void event(NetworkConfigEvent event) {
             if (event.configClass().equals(SegmentRoutingConfig.class)) {
-                SegmentRoutingConfig config = (SegmentRoutingConfig)event.config().get();
-                DeviceId deviceid = config.subject();
+                if (event.type() == CONFIG_REGISTERED || event.type() == CONFIG_UNREGISTERED) {
+                    return;
+                }
+
+                DeviceId deviceid = (DeviceId)event.subject();
                 Device device = deviceService.getDevice(deviceid);
                 if (device == null) {
                     log.warn("Received strange config subject: <DeviceId = {}>", deviceid);
@@ -452,8 +457,12 @@ public class AppComponent {
                     return;
                 }
 
+                SegmentRoutingConfig config;
+                SegmentRoutingConfig prev_config;
                 switch (event.type()) {
                     case CONFIG_ADDED:
+                        config = (SegmentRoutingConfig)event.config().get();
+
                         log.info("switch {} SR Config is added!", deviceid);
                         log.info("\tID = {}, Subnet = {}", config.segmentId(), config.subnet());
 
@@ -466,7 +475,8 @@ public class AppComponent {
                         }
                         break;
                     case CONFIG_UPDATED:
-                        SegmentRoutingConfig prev_config = (SegmentRoutingConfig)event.prevConfig().get();
+                        config = (SegmentRoutingConfig)event.config().get();
+                        prev_config = (SegmentRoutingConfig)event.prevConfig().get();
 
                         log.info("Switch {} SR Config is updated!", deviceid);
                         log.info("\tID = {} -> {}, Subnet = {} -> {}", 
@@ -508,14 +518,15 @@ public class AppComponent {
                         }
                         break;
                     case CONFIG_REMOVED:
+                        prev_config = (SegmentRoutingConfig)event.prevConfig().get();
                         log.info("switch {} SR Config is removed!", deviceid);
-                        log.info("\tID = {}, Subnet = {}", config.segmentId(), config.subnet());
+                        log.info("\tID = {}, Subnet = {}", prev_config.segmentId(), prev_config.subnet());
 
-                        removeSegmentRoutingRules(device, config.segmentId());
-                        segment_table.remove(config.segmentId());
+                        removeSegmentRoutingRules(device, prev_config.segmentId());
+                        segment_table.remove(prev_config.segmentId());
                         removeMainRules(device);
-                        if (config.subnet().isPresent()) {
-                            IpPrefix prev_subnet = config.subnet().get();
+                        if (prev_config.subnet().isPresent()) {
+                            IpPrefix prev_subnet = prev_config.subnet().get();
                             Short prev_segmentId = subnet_table.get(prev_subnet);
                             if (prev_segmentId != null) {
                                 removeSubnetRules(prev_subnet, prev_segmentId);
@@ -526,6 +537,8 @@ public class AppComponent {
                         }
 
                         addMainRules(device);
+                        break;
+                    default:
                         break;
                 }
             }
