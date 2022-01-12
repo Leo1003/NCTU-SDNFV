@@ -19,6 +19,7 @@ import org.onlab.packet.Ethernet;
 import org.onlab.packet.IpAddress;
 import org.onlab.packet.IpPrefix;
 import org.onlab.packet.Ip4Prefix;
+import org.onlab.packet.MacAddress;
 import org.onlab.packet.VlanId;
 import org.onosproject.cfg.ComponentConfigService;
 import org.onosproject.core.ApplicationId;
@@ -79,6 +80,7 @@ public class AppComponent {
     private final int MAIN_PRIORITY = 2000;
     private final int SEGMENT_ROUTING_PRIORITY = 2000;
     private final int HOST_FORWARDING_PRIORITY = 2000;
+    private final int FALLBACK_PRIORITY = 0;
 
     private final int MAIN_TABLEID = 0;
     private final int SEGMENT_ROUTING_TABLEID = 1;
@@ -184,14 +186,14 @@ public class AppComponent {
      */
     private void addSubnetRules(IpPrefix subnet, short segmentId) {
         for (Device device: deviceService.getDevices(Device.Type.SWITCH)) {
-            FlowRule nonlocal_rule = buildNonlocalFlowRule(device, subnet, segmentId);
+            FlowRule nonlocal_rule = buildNonlocalRule(device, subnet, segmentId);
             flowRuleService.applyFlowRules(nonlocal_rule);
         }
     }
 
     private void removeSubnetRules(IpPrefix subnet, short segmentId) {
         for (Device device: deviceService.getDevices(Device.Type.SWITCH)) {
-            FlowRule nonlocal_rule = buildNonlocalFlowRule(device, subnet, segmentId);
+            FlowRule nonlocal_rule = buildNonlocalRule(device, subnet, segmentId);
             flowRuleService.removeFlowRules(nonlocal_rule);
         }
     }
@@ -199,15 +201,18 @@ public class AppComponent {
     private void addMainRules(Device device) {
         SegmentRoutingConfig config = cfgService.getConfig(device.id(), SegmentRoutingConfig.class);
 
-        FlowRule nondest_rule = buildNondestFlowRule(device);
+        FlowRule nondest_rule = buildNondestRule(device);
         flowRuleService.applyFlowRules(nondest_rule);
 
+        FlowRule fallback_rule = buildLocalFallbackRule(device);
+        flowRuleService.applyFlowRules(fallback_rule);
+
         if (config != null) {
-            FlowRule dest_rule = buildRoutingDestFlowRule(device, config.segmentId());
+            FlowRule dest_rule = buildRoutingDestRule(device, config.segmentId());
             flowRuleService.applyFlowRules(dest_rule);
 
             if (config.subnet().isPresent()) {
-                FlowRule local_rule = buildLocalFlowRule(device, config.subnet().get());
+                FlowRule local_rule = buildLocalRule(device, config.subnet().get());
                 flowRuleService.applyFlowRules(local_rule);
             }
         }
@@ -219,21 +224,24 @@ public class AppComponent {
     }
 
     private void removeMainRules(Device device, SegmentRoutingConfig config) {
-        FlowRule nondest_rule = buildNondestFlowRule(device);
+        FlowRule nondest_rule = buildNondestRule(device);
         flowRuleService.removeFlowRules(nondest_rule);
 
+        FlowRule fallback_rule = buildLocalFallbackRule(device);
+        flowRuleService.removeFlowRules(fallback_rule);
+
         if (config != null) {
-            FlowRule dest_rule = buildRoutingDestFlowRule(device, config.segmentId());
+            FlowRule dest_rule = buildRoutingDestRule(device, config.segmentId());
             flowRuleService.removeFlowRules(dest_rule);
 
             if (config.subnet().isPresent()) {
-                FlowRule local_rule = buildLocalFlowRule(device, config.subnet().get());
+                FlowRule local_rule = buildLocalRule(device, config.subnet().get());
                 flowRuleService.removeFlowRules(local_rule);
             }
         }
     }
 
-    private FlowRule buildRoutingDestFlowRule(Device device, short segment) {
+    private FlowRule buildRoutingDestRule(Device device, short segment) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchVlanId(VlanId.vlanId(segment))
             .build();
@@ -253,7 +261,7 @@ public class AppComponent {
             .build();
     }
 
-    private FlowRule buildNondestFlowRule(Device device) {
+    private FlowRule buildNondestRule(Device device) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchVlanId(VlanId.ANY)
             .build();
@@ -272,7 +280,7 @@ public class AppComponent {
             .build();
     }
 
-    private FlowRule buildLocalFlowRule(Device device, IpPrefix subnet) {
+    private FlowRule buildLocalRule(Device device, IpPrefix subnet) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchEthType(Ethernet.TYPE_IPV4)
             .matchVlanId(VlanId.NONE)
@@ -293,7 +301,7 @@ public class AppComponent {
             .build();
     }
 
-    private FlowRule buildNonlocalFlowRule(Device device, IpPrefix subnet, short segmentId) {
+    private FlowRule buildNonlocalRule(Device device, IpPrefix subnet, short segmentId) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchEthType(Ethernet.TYPE_IPV4)
             .matchVlanId(VlanId.NONE)
@@ -316,6 +324,25 @@ public class AppComponent {
             .build();
     }
 
+    private FlowRule buildLocalFallbackRule(Device device) {
+        TrafficSelector selector = DefaultTrafficSelector.builder()
+            .matchVlanId(VlanId.NONE)
+            .build();
+        TrafficTreatment treatment = DefaultTrafficTreatment.builder()
+            .immediate()
+            .transition(this.HOST_FORWARDING_TABLEID)
+            .build();
+        return DefaultFlowRule.builder()
+            .forDevice(device.id())
+            .forTable(this.MAIN_TABLEID)
+            .fromApp(this.appId)
+            .withSelector(selector)
+            .withTreatment(treatment)
+            .withPriority(this.FALLBACK_PRIORITY)
+            .makePermanent()
+            .build();
+    }
+
     /*
      * Switch Routing Rules
      */
@@ -328,7 +355,7 @@ public class AppComponent {
         }
 
         for (Link l: new BfsLinkIterator(graph, device.id())) {
-            FlowRule rule = buildRoutingFlowRule(l, config.segmentId());
+            FlowRule rule = buildRoutingRule(l, config.segmentId());
             flowRuleService.applyFlowRules(rule);
         }
     }
@@ -341,15 +368,15 @@ public class AppComponent {
         Topology topo = topologyService.currentTopology();
         TopologyGraph graph = topologyService.getGraph(topo);
 
-        FlowRule dest_rule = buildRoutingDestFlowRule(device, segmentId);
+        FlowRule dest_rule = buildRoutingDestRule(device, segmentId);
         flowRuleService.removeFlowRules(dest_rule);
         for (Link l: new BfsLinkIterator(graph, device.id())) {
-            FlowRule rule = buildRoutingFlowRule(l, segmentId);
+            FlowRule rule = buildRoutingRule(l, segmentId);
             flowRuleService.removeFlowRules(rule);
         }
     }
 
-    private FlowRule buildRoutingFlowRule(Link link, short segment) {
+    private FlowRule buildRoutingRule(Link link, short segment) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
             .matchVlanId(VlanId.vlanId(segment))
             .build();
@@ -372,17 +399,8 @@ public class AppComponent {
      */
     private void addHostFlowRules(Host host) {
         for (HostLocation location: host.locations()) {
-            DeviceId deviceid = location.deviceId();
-            SegmentRoutingConfig config = cfgService.getConfig(deviceid, SegmentRoutingConfig.class);
-            if (config != null && config.subnet().isPresent()) {
-                IpPrefix prefix = config.subnet().get();
-                for (IpAddress ip: host.ipAddresses()) {
-                    if (prefix.contains(ip)) {
-                        FlowRule rule = buildHostFlowRule(location, ip);
-                        flowRuleService.applyFlowRules(rule);
-                    }
-                }
-            }
+            FlowRule rule = buildHostRule(location, host.mac());
+            flowRuleService.applyFlowRules(rule);
         }
     }
 
@@ -401,25 +419,15 @@ public class AppComponent {
 
     private void removeHostFlowRules(Host host) {
         for (HostLocation location: host.locations()) {
-            DeviceId deviceid = location.deviceId();
-            SegmentRoutingConfig config = cfgService.getConfig(deviceid, SegmentRoutingConfig.class);
-            if (config.subnet().isPresent()) {
-                IpPrefix prefix = config.subnet().get();
-                for (IpAddress ip: host.ipAddresses()) {
-                    if (prefix.contains(ip)) {
-                        FlowRule rule = buildHostFlowRule(location, ip);
-                        flowRuleService.removeFlowRules(rule);
-                    }
-                }
-            }
+            FlowRule rule = buildHostRule(location, host.mac());
+            flowRuleService.removeFlowRules(rule);
         }
     }
 
-    private FlowRule buildHostFlowRule(HostLocation location, IpAddress ip) {
+    private FlowRule buildHostRule(HostLocation location, MacAddress mac) {
         TrafficSelector selector = DefaultTrafficSelector.builder()
-            .matchEthType(Ethernet.TYPE_IPV4)
             .matchVlanId(VlanId.NONE)
-            .matchIPDst(ip.toIpPrefix())
+            .matchEthDst(mac)
             .build();
         TrafficTreatment treatment = DefaultTrafficTreatment.builder()
             .setOutput(location.port())
@@ -479,10 +487,10 @@ public class AppComponent {
                         prev_config = (SegmentRoutingConfig)event.prevConfig().get();
 
                         log.info("Switch {} SR Config is updated!", deviceid);
-                        log.info("\tID = {} -> {}, Subnet = {} -> {}", 
-                                prev_config.segmentId(), 
-                                config.segmentId(), 
-                                prev_config.subnet(), 
+                        log.info("\tID = {} -> {}, Subnet = {} -> {}",
+                                prev_config.segmentId(),
+                                config.segmentId(),
+                                prev_config.subnet(),
                                 config.subnet());
 
                         // Detect if segment ID is modified
