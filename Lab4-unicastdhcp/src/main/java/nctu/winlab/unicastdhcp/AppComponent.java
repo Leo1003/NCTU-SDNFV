@@ -141,14 +141,14 @@ public class AppComponent {
                 .matchUdpSrc(TpPort.tpPort(68))
                 .matchUdpDst(TpPort.tpPort(67))
                 .build();
-        packetService.requestPackets(this.dhcpSelector, PacketPriority.REACTIVE, appId);
+        packetService.requestPackets(this.dhcpSelector, PacketPriority.CONTROL, appId);
     }
 
     /**
      * Cancel request for packet in via packet service.
      */
     private void removePacketInRules() {
-        packetService.cancelPackets(this.dhcpSelector, PacketPriority.REACTIVE, appId);
+        packetService.cancelPackets(this.dhcpSelector, PacketPriority.CONTROL, appId);
     }
 
     private class NameConfigListener implements NetworkConfigListener {
