@@ -1,0 +1,39 @@
+{
+    "apps": {
+        "nctu.winlab.unicastdhcp": {
+            "UnicastDhcpConfig": {
+                "serverLocation": "of:0000000000000003/2"
+            }
+        }
+    },
+    "devices": {
+        "of:0000000000000001": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 101
+            }
+        },
+        "of:0000000000000002": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 102
+            }
+        },
+        "of:0000000000000003": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 103,
+                "Subnet": "192.168.2.0/27"
+            }
+        },
+        "of:0000000000000004": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 104,
+                "Subnet": "192.168.2.32/27"
+            }
+        },
+        "of:0000000000000005": {
+            "SegmentRoutingConfig": {
+                "SegmentID": 105,
+                "Subnet": "192.168.2.64/27"
+            }
+        }
+    }
+}
